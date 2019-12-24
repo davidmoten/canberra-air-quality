@@ -35,21 +35,39 @@ public class RollingAverageTest {
                 .filter(x -> x.time > sdf.parse("01/11/2019 01:00:00 AM").getTime()) //
                 .filter(x -> x.name.equalsIgnoreCase("Civic")) //
                 .sorted((x, y) -> Long.compare(x.time, y.time)) //
+                .takeLast(10) //
                 .toList() //
                 .get();
-        int windowLength = 24;
+        int windowLength = 4;
         System.out.println(list.size());
-        Matrix m = new Matrix(list.size() - windowLength, list.size());
+        Matrix m = new Matrix(list.size() - windowLength + 1, list.size());
         for (int row = 0; row < m.getRowDimension(); row++) {
-            for (int col = row; col < m.getColumnDimension(); col++) {
-                
+            for (int col = row; col < row + windowLength; col++) {
+                m.set(row, col, 1 / (double) windowLength);
             }
         }
+        System.out.println(toString(m));
+        Matrix inv = m.inverse();
+        System.out.println(inv.getRowDimension() + "x" + inv.getColumnDimension());
+    }
+
+    private static String toString(Matrix m) {
+        StringBuilder b = new StringBuilder();
+        for (int row = 0; row < m.getRowDimension(); row++) {
+            for (int col = 0; col < m.getColumnDimension(); col++) {
+                if (col > 0) {
+                    b.append("\t");
+                }
+                b.append(m.get(row, col));
+            }
+            b.append("\n");
+        }
+        return b.toString();
     }
 
     @Test
     public void testSdf() throws ParseException {
-        System.out.println(sdf.parse("16/12/2019 01:00:00 PM"));
+        sdf.parse("16/12/2019 01:00:00 PM");
     }
 
     private static long toTime(String s) {
