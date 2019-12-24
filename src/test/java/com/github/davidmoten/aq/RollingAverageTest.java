@@ -8,9 +8,12 @@ import java.util.Date;
 import java.util.List;
 
 import org.davidmoten.kool.Stream;
+import org.ejml.data.DMatrixRMaj;
+import org.ejml.data.Matrix;
+import org.ejml.dense.row.factory.LinearSolverFactory_DDRM;
+import org.ejml.interfaces.linsol.LinearSolver;
+import org.ejml.interfaces.linsol.LinearSolverDense;
 import org.junit.Test;
-
-import Jama.Matrix;
 
 public class RollingAverageTest {
 
@@ -40,21 +43,25 @@ public class RollingAverageTest {
                 .get();
         int windowLength = 4;
         System.out.println(list.size());
-        Matrix m = new Matrix(list.size() - windowLength + 1, list.size());
-        for (int row = 0; row < m.getRowDimension(); row++) {
+        LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.pseudoInverse(true);
+        DMatrixRMaj m = new DMatrixRMaj(list.size() - windowLength + 1, list.size());
+        for (int row = 0; row < m.numRows; row++) {
             for (int col = row; col < row + windowLength; col++) {
                 m.set(row, col, 1 / (double) windowLength);
             }
         }
-        System.out.println(toString(m));
-        Matrix inv = m.inverse();
-        System.out.println(inv.getRowDimension() + "x" + inv.getColumnDimension());
+        solver.setA(m);
+        DMatrixRMaj inv = new DMatrixRMaj(list.size() - windowLength + 1, list.size());
+        solver.invert(inv);
+        System.out.println(toString(inv));
+        
+        // multiply inv be entries to get original values
     }
 
-    private static String toString(Matrix m) {
+    private static String toString(DMatrixRMaj m) {
         StringBuilder b = new StringBuilder();
-        for (int row = 0; row < m.getRowDimension(); row++) {
-            for (int col = 0; col < m.getColumnDimension(); col++) {
+        for (int row = 0; row < m.numRows; row++) {
+            for (int col = 0; col < m.numCols; col++) {
                 if (col > 0) {
                     b.append("\t");
                 }
