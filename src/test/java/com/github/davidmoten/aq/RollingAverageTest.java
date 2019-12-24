@@ -69,7 +69,7 @@ public class RollingAverageTest {
         System.out.println("entries length=" + list.size());
         System.out.println("z size=" + z.numRows());
         for (int i = 0; i < z.numRows(); i++) {
-            System.out.println(new Date(list.get(i + windowLength - 2).time) + " " + z.get(i, 0));
+            System.out.println(new Date(list.get(i).time) + " " + z.get(i, 0));
         }
     }
 
