@@ -1,5 +1,7 @@
 package com.github.davidmoten.aq;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
@@ -68,28 +70,16 @@ public class RollingAverageTest {
         System.out.println("-------------");
         System.out.println("entries length=" + list.size());
         System.out.println("z size=" + z.numRows());
-        for (int i = 0; i < z.numRows(); i++) {
-            System.out.println(new Date(list.get(i).time) + " " + z.get(i, 0));
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        for (int i = 0; i < list.size(); i++) {
+            System.out.println(
+                    sdf.format(new Date(list.get(i).time)) + "\t" + z.get(i + windowLength - 1, 0));
         }
-    }
-
-    private static String toString(SimpleMatrix m) {
-        StringBuilder b = new StringBuilder();
-        for (int row = 0; row < m.numRows(); row++) {
-            for (int col = 0; col < m.numCols(); col++) {
-                if (col > 0) {
-                    b.append("\t");
-                }
-                b.append(m.get(row, col));
-            }
-            b.append("\n");
-        }
-        return b.toString();
     }
 
     @Test
     public void testSdf() throws ParseException {
-        sdf.parse("16/12/2019 01:00:00 PM");
+        assertEquals(1576461600000L, sdf.parse("16/12/2019 01:00:00 PM").getTime());
     }
 
     private static long toTime(String s) {
