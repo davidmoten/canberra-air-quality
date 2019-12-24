@@ -9,10 +9,9 @@ import java.util.List;
 
 import org.davidmoten.kool.Stream;
 import org.ejml.data.DMatrixRMaj;
-import org.ejml.data.Matrix;
 import org.ejml.dense.row.factory.LinearSolverFactory_DDRM;
-import org.ejml.interfaces.linsol.LinearSolver;
 import org.ejml.interfaces.linsol.LinearSolverDense;
+import org.ejml.simple.SimpleMatrix;
 import org.junit.Test;
 
 public class RollingAverageTest {
@@ -38,30 +37,46 @@ public class RollingAverageTest {
                 .filter(x -> x.time > sdf.parse("01/11/2019 01:00:00 AM").getTime()) //
                 .filter(x -> x.name.equalsIgnoreCase("Civic")) //
                 .sorted((x, y) -> Long.compare(x.time, y.time)) //
-                .takeLast(10) //
                 .toList() //
                 .get();
-        int windowLength = 4;
-        System.out.println(list.size());
+        int windowLength = 24;
         LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.pseudoInverse(true);
-        DMatrixRMaj m = new DMatrixRMaj(list.size() - windowLength + 1, list.size());
+        DMatrixRMaj m = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
         for (int row = 0; row < m.numRows; row++) {
             for (int col = row; col < row + windowLength; col++) {
                 m.set(row, col, 1 / (double) windowLength);
             }
         }
         solver.setA(m);
-        DMatrixRMaj inv = new DMatrixRMaj(list.size() - windowLength + 1, list.size());
+        DMatrixRMaj inv = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
         solver.invert(inv);
-        System.out.println(toString(inv));
-        
+
         // multiply inv be entries to get original values
+
+        // Solve Ax = y for x
+        SimpleMatrix aInv = new SimpleMatrix(inv);
+        SimpleMatrix y = new SimpleMatrix(list.size(), 1);
+        for (int i = 0; i < list.size(); i++) {
+            y.set(i, 0, list.get(i).value);
+        }
+        // Then Ainv . A x = Ainv . y
+        // Therefore x = Ainv . y
+
+        System.out.println("aInv: " + aInv.numRows() + "x" + aInv.numCols());
+        System.out.println("y: " + y.numRows() + "x" + y.numCols());
+        SimpleMatrix z = aInv.mult(y);
+        System.out.println("-------------");
+        System.out.println("entries length=" + list.size());
+        System.out.println("z size=" + z.numRows());
+        for (int i = 0; i < z.numRows(); i++) {
+            System.out.println(new Date(list.get(i + windowLength - 2).time) + " " + z.get(i, 0));
+        }
     }
 
-    private static String toString(DMatrixRMaj m) {
+    private static String toString(SimpleMatrix m) {
         StringBuilder b = new StringBuilder();
-        for (int row = 0; row < m.numRows; row++) {
-            for (int col = 0; col < m.numCols; col++) {
+        for (int row = 0; row < m.numRows(); row++) {
+            for (int col = 0; col < m.numCols(); col++) {
                 if (col > 0) {
                     b.append("\t");
                 }
