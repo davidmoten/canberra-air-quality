@@ -26,6 +26,7 @@ public class RollingAverageTest {
     // Florey,"(-35.220606, 149.043539)",16/12/2019 01:00:00
     // PM,0,0.03,0.029,0.32,14.67,3.15,3,0,30,36,29,12,36,16 December 2019,13:00:00
 
+    private static final String START_TIMESTAMP = "01/11/2019 01:00:00 AM";
     static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss aaa");
 
     @Test
@@ -35,20 +36,26 @@ public class RollingAverageTest {
             List<Entry> list = Stream
                     .lines(() -> RollingAverage.class.getResourceAsStream("/air.csv"),
                             StandardCharsets.UTF_8) //
+                    // skip header line
                     .skip(1) //
+                    // skip blank lines
                     .filter(x -> x.length() > 0) //
+                    // remove the quoted geolocation
                     .map(x -> x.replaceAll("\".*\",", "")) //
+                    // get items in row
                     .map(x -> x.split(",")) //
-                    .doOnNext(x -> {
-                        if (x[12].isEmpty() && x[1].contains("12/2019")) {
-                            System.out.println(Arrays.toString(x));
-                        }
-                    }).filter(x -> x[1].length() > 0) //
+                    // ignore if no timestamp present
+                    .filter(x -> x[1].length() > 0) //
+                    // parse the time and the PM2.5 value
                     .map(x -> new Entry(x[0], toTime(x[1]), getDouble(x[12]))) //
-                    .filter(x -> x.time > sdf.parse("01/11/2019 01:00:00 AM").getTime()) //
-                    .filter(x -> x.name.equalsIgnoreCase("Civic")) //
+                    // only since start time
+                    .filter(x -> x.time > sdf.parse(START_TIMESTAMP).getTime()) //
+                    // just the selected station
+                    .filter(x -> x.name.equalsIgnoreCase(name)) //
+                    // sort by time 
                     .sorted((x, y) -> Long.compare(x.time, y.time)) //
                     .toList() //
+                    // deal with missing entries
                     .map(x -> {
                         // trim all missing entries from the start and finish
                         List<Entry> v = Stream //
@@ -80,6 +87,7 @@ public class RollingAverageTest {
                         // any missing entries set them to the average of the value before and after
                         return v;
                     }).get();
+            
             int windowLength = 24;
             LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.pseudoInverse(true);
             DMatrixRMaj m = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
