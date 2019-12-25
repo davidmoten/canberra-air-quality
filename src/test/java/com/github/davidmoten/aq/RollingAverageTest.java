@@ -34,7 +34,7 @@ public class RollingAverageTest {
     static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss aaa");
 
     @Test
-    public void test() throws IOException {
+    public void extractRawValuesAndPersist() throws IOException {
         for (String name : STATIONS) {
             System.out.println(name);
             List<Entry> list = Stream
