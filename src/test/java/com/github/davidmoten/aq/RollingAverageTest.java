@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.TimeZone;
 
 import org.davidmoten.kool.Stream;
 import org.ejml.data.DMatrixRMaj;
@@ -31,7 +32,13 @@ public class RollingAverageTest {
 
     private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
     private static final String START_TIMESTAMP = "01/11/2019 01:00:00 AM";
-    static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss aaa");
+    static final SimpleDateFormat sdf = createSdf();
+
+    private static SimpleDateFormat createSdf() {
+        SimpleDateFormat s = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss aaa");
+        s.setTimeZone(TimeZone.getTimeZone("GMT+11:00"));
+        return s;
+    }
 
     @Test
     public void extractRawValuesAndPersist() throws IOException {
