@@ -8,7 +8,6 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -20,18 +19,23 @@ import org.ejml.interfaces.linsol.LinearSolverDense;
 import org.ejml.simple.SimpleMatrix;
 import org.junit.Test;
 
+/**
+ * Example input lines downloaded from ACT gov portal
+ * 
+ * <pre>
+* Name,GPS,DateTime,NO2,O3_1hr,O3_4hr,CO,PM10,PM2.5,AQI_CO,AQI_NO2,AQI_O3_1hr,AQI_O3_4hr,AQI_PM10,AQI_PM2.5,AQI_Site,Date,Time
+* Florey,"(-35.220606, 149.043539)",16/12/2019 01:00:00 PM,0,0.03,0.029,0.32,14.67,3.15,3,0,30,36,29,12,36,16 December 2019,13:00:00
+ * </pre>
+ **/
 public class RollingAverageTest {
 
-    // Name,GPS,DateTime,NO2,O3_1hr,O3_4hr,CO,PM10,PM2.5,AQI_CO,AQI_NO2,AQI_O3_1hr,AQI_O3_4hr,AQI_PM10,AQI_PM2.5,AQI_Site,Date,Time
-    // Florey,"(-35.220606, 149.043539)",16/12/2019 01:00:00
-    // PM,0,0.03,0.029,0.32,14.67,3.15,3,0,30,36,29,12,36,16 December 2019,13:00:00
-
+    private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
     private static final String START_TIMESTAMP = "01/11/2019 01:00:00 AM";
     static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss aaa");
 
     @Test
     public void test() throws IOException {
-        for (String name : new String[] { "Civic", "Florey", "Monash" }) {
+        for (String name : STATIONS) {
             System.out.println(name);
             List<Entry> list = Stream
                     .lines(() -> RollingAverage.class.getResourceAsStream("/air.csv"),
@@ -52,7 +56,7 @@ public class RollingAverageTest {
                     .filter(x -> x.time > sdf.parse(START_TIMESTAMP).getTime()) //
                     // just the selected station
                     .filter(x -> x.name.equalsIgnoreCase(name)) //
-                    // sort by time 
+                    // sort by time
                     .sorted((x, y) -> Long.compare(x.time, y.time)) //
                     .toList() //
                     // deal with missing entries
@@ -87,7 +91,7 @@ public class RollingAverageTest {
                         // any missing entries set them to the average of the value before and after
                         return v;
                     }).get();
-            
+
             int windowLength = 24;
             LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.pseudoInverse(true);
             DMatrixRMaj m = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
@@ -97,6 +101,8 @@ public class RollingAverageTest {
                 }
             }
             solver.setA(m);
+
+            // destination matrix for the inversion
             DMatrixRMaj inv = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
             solver.invert(inv);
 
