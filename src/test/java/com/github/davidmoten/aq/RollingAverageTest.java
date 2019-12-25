@@ -58,6 +58,7 @@ public class RollingAverageTest {
                     .filter(x -> x.name.equalsIgnoreCase(name)) //
                     // sort by time
                     .sorted((x, y) -> Long.compare(x.time, y.time)) //
+                    // collect
                     .toList() //
                     // deal with missing entries
                     .map(x -> {
@@ -93,30 +94,19 @@ public class RollingAverageTest {
                     }).get();
 
             int windowLength = 24;
-            LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.pseudoInverse(true);
-            DMatrixRMaj m = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
-            for (int row = 0; row < m.numRows; row++) {
-                for (int col = row; col < row + windowLength; col++) {
-                    m.set(row, col, 1 / (double) windowLength);
-                }
-            }
-            solver.setA(m);
-
-            // destination matrix for the inversion
-            DMatrixRMaj inv = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
-            solver.invert(inv);
-
-            // multiply inv be entries to get original values
 
             // Solve Ax = y for x
-            SimpleMatrix aInv = new SimpleMatrix(inv);
+            
+            // calculate the pseudo inverse of A
+            SimpleMatrix aInv = getPseudoInverse(list, windowLength);
+            
             SimpleMatrix y = new SimpleMatrix(list.size(), 1);
             for (int i = 0; i < list.size(); i++) {
                 y.set(i, 0, list.get(i).value.get());
             }
+            
             // Then Ainv . A x = Ainv . y
             // Therefore x = Ainv . y
-
             SimpleMatrix z = aInv.mult(y);
 
             File outfile = new File("src/output/" + name + ".csv");
@@ -129,6 +119,23 @@ public class RollingAverageTest {
                 }
             }
         }
+    }
+
+    private static SimpleMatrix getPseudoInverse(List<Entry> list, int windowLength) {
+        LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.pseudoInverse(true);
+        DMatrixRMaj m = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
+        for (int row = 0; row < m.numRows; row++) {
+            for (int col = row; col < row + windowLength; col++) {
+                m.set(row, col, 1 / (double) windowLength);
+            }
+        }
+        solver.setA(m);
+
+        // destination matrix for the inversion
+        DMatrixRMaj inv = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
+        solver.invert(inv);
+
+        return new SimpleMatrix(inv);
     }
 
     @Test
