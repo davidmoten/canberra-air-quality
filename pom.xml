@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -9,13 +9,13 @@
         <artifactId>sonatype-parent</artifactId>
         <version>0.1</version>
     </parent>
-    <artifactId>air-quality</artifactId>
+    <artifactId>canberra-air-quality</artifactId>
     <version>0.1-SNAPSHOT</version>
     <name>${project.artifactId}</name>
     <description>Utilities for transforming distance along N-dimensional Hilbert Curve to a point and back</description>
     <packaging>jar</packaging>
 
-    <url>http://github.com/davidmoten/air-quality</url>
+    <url>http://github.com/davidmoten/canberra-air-quality</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -50,12 +50,12 @@
 
     <ciManagement>
         <system>Travis</system>
-        <url>https://travis-ci.org/davidmoten/air-quality</url>
+        <url>https://travis-ci.org/davidmoten/canberra-air-quality</url>
     </ciManagement>
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/davidmoten/air-quality/issues</url>
+        <url>https://github.com/davidmoten/canberra-air-quality/issues</url>
     </issueManagement>
 
     <inceptionYear>2019</inceptionYear>
@@ -73,9 +73,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/davidmoten/air-quality.git</connection>
-        <developerConnection>scm:git:https://github.com/davidmoten/air-quality.git</developerConnection>
-        <url>scm:git:https://github.com:davidmoten/air-quality.git</url>
+        <connection>scm:git:https://github.com/davidmoten/canberra-air-quality.git</connection>
+        <developerConnection>scm:git:https://github.com/davidmoten/canberra-air-quality.git</developerConnection>
+        <url>scm:git:https://github.com:davidmoten/canberra-air-quality.git</url>
         <tag>HEAD</tag>
     </scm>
 
