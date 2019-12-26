@@ -18,6 +18,11 @@ import org.ejml.data.DMatrixRMaj;
 import org.ejml.dense.row.factory.LinearSolverFactory_DDRM;
 import org.ejml.interfaces.linsol.LinearSolverDense;
 import org.ejml.simple.SimpleMatrix;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtils;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.CategoryDataset;
+import org.jfree.data.category.DefaultCategoryDataset;
 import org.junit.Test;
 
 /**
@@ -103,17 +108,18 @@ public class RollingAverageTest {
             int windowLength = 24;
 
             // Solve Ax = y for x
-            
+
             // calculate the pseudo inverse of A
             SimpleMatrix aInv = getPseudoInverse(list, windowLength);
-            
+
             SimpleMatrix y = new SimpleMatrix(list.size(), 1);
             for (int i = 0; i < list.size(); i++) {
                 y.set(i, 0, list.get(i).value.get());
             }
-            
+
             // Then Ainv . A x = Ainv . y
             // Therefore x = Ainv . y
+
             SimpleMatrix z = aInv.mult(y);
 
             File outfile = new File("src/output/" + name + ".csv");
@@ -125,6 +131,17 @@ public class RollingAverageTest {
                             + z.get(i + windowLength - 1, 0));
                 }
             }
+
+            DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            for (int i = 0; i < list.size(); i++) {
+                dataset.addValue(z.get(i + windowLength - 1, 0), name,
+                        sdf.format(new Date(list.get(i).time)));
+            }
+            JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
+                    "PM 2.5 Raw", dataset);
+            ChartUtils.saveChartAsPNG(new File("target/"+ name + ".png"), chart, 2000, 1200);
+            System.out.println("saved chart as png");
         }
     }
 
@@ -182,6 +199,16 @@ public class RollingAverageTest {
             return "Entry [name=" + name + ", time=" + new Date(time) + ", value=" + value + "]";
         }
 
+    }
+
+    public static void main(String[] args) throws IOException {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        dataset.addValue(10, "Civic", "2019-12-23 01:00");
+        dataset.addValue(16, "Civic", "2019-12-23 02:00");
+        JFreeChart chart = ChartFactory.createBarChart("Civic" + " hourly PM 2.5", "Time",
+                "PM 2.5 Raw", dataset);
+        ChartUtils.saveChartAsPNG(new File("target/chart.png"), chart, 2000, 1200);
+        System.out.println("saved chart as png");
     }
 
 }
