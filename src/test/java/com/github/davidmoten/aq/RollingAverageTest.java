@@ -58,7 +58,6 @@ public class RollingAverageTest {
                     .skip(1) //
                     // skip blank lines
                     .filter(x -> x.length() > 0) //
-                    .doOnNext(System.out::println) //
                     // remove the quoted geolocation
                     .map(x -> x.replaceAll("\".*\",", "")) //
                     // get items in row
