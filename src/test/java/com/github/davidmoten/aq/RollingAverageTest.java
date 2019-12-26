@@ -24,6 +24,8 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.junit.Test;
 
@@ -141,8 +143,16 @@ public class RollingAverageTest {
                 dataset.addValue(Math.max(0, z.get(i + windowLength - 1, 0)), name,
                         sdf.format(new Date(list.get(i).time)));
             }
+            for (int i = 0; i < list.size(); i++) {
+                dataset.addValue(list.get(i).value.orElse(0.0), name + " rolling avg",
+                        sdf.format(new Date(list.get(i).time)));
+            }
             JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
                     "PM 2.5 Raw", dataset);
+            chart.getCategoryPlot().setDataset(0, dataset);
+            chart.getCategoryPlot().setDataset(1, dataset);
+            chart.getCategoryPlot().setRenderer(0, new BarRenderer());
+            chart.getCategoryPlot().setRenderer(1, new LineAndShapeRenderer());
             CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
             axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
             ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
