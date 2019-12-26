@@ -21,7 +21,9 @@ import org.ejml.simple.SimpleMatrix;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
-import org.jfree.data.category.CategoryDataset;
+import org.jfree.chart.axis.CategoryAxis;
+import org.jfree.chart.axis.CategoryLabelPositions;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.junit.Test;
 
@@ -36,7 +38,7 @@ import org.junit.Test;
 public class RollingAverageTest {
 
     private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
-    private static final String START_TIMESTAMP = "01/11/2019 01:00:00 AM";
+    private static final String START_TIMESTAMP = "18/12/2019 01:00:00 AM";
     static final SimpleDateFormat sdf = createSdf();
 
     private static SimpleDateFormat createSdf() {
@@ -134,13 +136,19 @@ public class RollingAverageTest {
 
             DefaultCategoryDataset dataset = new DefaultCategoryDataset();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            sdf.setTimeZone(TimeZone.getTimeZone("GMT+11:00"));
             for (int i = 0; i < list.size(); i++) {
-                dataset.addValue(z.get(i + windowLength - 1, 0), name,
+                dataset.addValue(Math.max(0, z.get(i + windowLength - 1, 0)), name,
                         sdf.format(new Date(list.get(i).time)));
             }
             JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
                     "PM 2.5 Raw", dataset);
-            ChartUtils.saveChartAsPNG(new File("target/"+ name + ".png"), chart, 2000, 1200);
+            CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
+            axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
+            ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
+            rangeAxis.setLowerBound(0);
+            rangeAxis.setUpperBound(2000);
+            ChartUtils.saveChartAsPNG(new File("target/" + name + ".png"), chart, 6000, 1200);
             System.out.println("saved chart as png");
         }
     }
