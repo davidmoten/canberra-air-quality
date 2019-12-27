@@ -41,7 +41,7 @@ import org.junit.Test;
 public class RollingAverageTest {
 
     private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
-    private static final String START_TIMESTAMP = "16/12/2019 01:00:00 AM";
+    private static final String START_TIMESTAMP = "16/12/2019 00:00:00 AM";
     static final SimpleDateFormat sdf = createSdf();
 
     private static SimpleDateFormat createSdf() {
@@ -155,8 +155,7 @@ public class RollingAverageTest {
             chart.getCategoryPlot().setDataset(0, dataset2);
             chart.getCategoryPlot().setDataset(1, dataset);
             chart.getCategoryPlot().setRenderer(0, new LineAndShapeRenderer());
-            BarRenderer barRenderer = new BarRenderer();
-            chart.getCategoryPlot().setRenderer(1, barRenderer);
+            chart.getCategoryPlot().setRenderer(1, new BarRenderer());
             CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
             axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
             ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
