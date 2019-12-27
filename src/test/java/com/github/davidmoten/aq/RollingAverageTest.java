@@ -24,6 +24,7 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
@@ -40,7 +41,7 @@ import org.junit.Test;
 public class RollingAverageTest {
 
     private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
-    private static final String START_TIMESTAMP = "20/11/2019 01:00:00 AM";
+    private static final String START_TIMESTAMP = "16/12/2019 01:00:00 AM";
     static final SimpleDateFormat sdf = createSdf();
 
     private static SimpleDateFormat createSdf() {
@@ -154,12 +155,13 @@ public class RollingAverageTest {
             chart.getCategoryPlot().setDataset(0, dataset2);
             chart.getCategoryPlot().setDataset(1, dataset);
             chart.getCategoryPlot().setRenderer(0, new LineAndShapeRenderer());
-            chart.getCategoryPlot().setRenderer(1, new BarRenderer());
+            BarRenderer barRenderer = new BarRenderer();
+            chart.getCategoryPlot().setRenderer(1, barRenderer);
             CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
             axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
             ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
             rangeAxis.setLowerBound(0);
-            rangeAxis.setUpperBound(2000);
+            rangeAxis.setUpperBound(1500);
             ChartUtils.saveChartAsPNG(new File("target/" + name + ".png"), chart,
                     (int) Math.round(list.size() / 0.0395), 1200);
             System.out.println("saved chart as png");
