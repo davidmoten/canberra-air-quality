@@ -40,7 +40,7 @@ import org.junit.Test;
 public class RollingAverageTest {
 
     private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
-    private static final String START_TIMESTAMP = "1/12/2019 01:00:00 AM";
+    private static final String START_TIMESTAMP = "20/11/2019 01:00:00 AM";
     static final SimpleDateFormat sdf = createSdf();
 
     private static SimpleDateFormat createSdf() {
