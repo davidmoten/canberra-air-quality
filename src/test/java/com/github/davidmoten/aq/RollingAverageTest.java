@@ -3,6 +3,7 @@ package com.github.davidmoten.aq;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +25,6 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.axis.ValueAxis;
-import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
@@ -43,6 +43,7 @@ public class RollingAverageTest {
     private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
     private static final String START_TIMESTAMP = "16/12/2019 00:00:00 AM";
     static final SimpleDateFormat sdf = createSdf();
+    private static final int WINDOW_LENGTH = 24;
 
     private static SimpleDateFormat createSdf() {
         SimpleDateFormat s = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss aaa");
@@ -53,117 +54,148 @@ public class RollingAverageTest {
     @Test
     public void extractRawValuesAndPersist() throws IOException {
         for (String name : STATIONS) {
-            System.out.println(name);
-            List<Entry> list = Stream
-                    .lines(() -> RollingAverage.class.getResourceAsStream("/air.csv"),
-                            StandardCharsets.UTF_8) //
-                    // skip header line
-                    .skip(1) //
-                    // skip blank lines
-                    .filter(x -> x.length() > 0) //
-                    // remove the quoted geolocation
-                    .map(x -> x.replaceAll("\".*\",", "")) //
-                    // get items in row
-                    .map(x -> x.split(",")) //
-                    // ignore if no timestamp present
-                    .filter(x -> x[1].length() > 0) //
-                    // parse the time and the PM2.5 value
-                    .map(x -> new Entry(x[0], toTime(x[1]), getDouble(x[12]))) //
-                    // only since start time
-                    .filter(x -> x.time > sdf.parse(START_TIMESTAMP).getTime()) //
-                    // just the selected station
-                    .filter(x -> x.name.equalsIgnoreCase(name)) //
-                    // sort by time
-                    .sorted((x, y) -> Long.compare(x.time, y.time)) //
-                    // collect
-                    .toList() //
-                    // deal with missing entries
-                    .map(x -> {
-                        // trim all missing entries from the start and finish
-                        List<Entry> v = Stream //
-                                .from(x) //
-                                .skipUntil(y -> y.value.isPresent()) //
-                                .reverse() //
-                                .skipUntil(y -> y.value.isPresent()) //
-                                .reverse() //
-                                .toList() //
-                                .get();
+            Result r = extractAndSaveChart(name, START_TIMESTAMP, "target/" + name + ".png");
+            saveDataForExcel(r.entries(), r.z(), new File("target/" + name + ".csv"));
+            saveChart(r.entries(), r.z(), name, "target/" + name + ".png");
+        }
+    }
 
-                        // fix missing using average where possible or repeating previous value
-                        for (int i = 1; i < v.size() - 1; i++) {
-                            Entry entry = v.get(i);
-                            if (!entry.value.isPresent()) {
-                                if (v.get(i + 1).value.isPresent()) {
-                                    Entry entry2 = new Entry(entry.name, entry.time, Optional.of(
-                                            (v.get(i - 1).value.get() + v.get(i + 1).value.get())
-                                                    / 2));
-                                    v.set(i, entry2);
-                                } else {
-                                    Entry entry2 = new Entry(entry.name, entry.time,
-                                            Optional.of(v.get(i - 1).value.get()));
-                                    v.set(i, entry2);
-                                }
+    private Result extractAndSaveChart(String name, String startTimestamp, String chartFilename)
+            throws FileNotFoundException, IOException {
+        System.out.println(name);
+        List<Entry> list = Stream
+                .lines(() -> RollingAverage.class.getResourceAsStream("/air.csv"),
+                        StandardCharsets.UTF_8) //
+                // skip header line
+                .skip(1) //
+                // skip blank lines
+                .filter(x -> x.length() > 0) //
+                // remove the quoted geolocation
+                .map(x -> x.replaceAll("\".*\",", "")) //
+                // get items in row
+                .map(x -> x.split(",")) //
+                // ignore if no timestamp present
+                .filter(x -> x[1].length() > 0) //
+                // parse the time and the PM2.5 value
+                .map(x -> new Entry(x[0], toTime(x[1]), getDouble(x[12]))) //
+                // only since start time
+                .filter(x -> x.time > sdf.parse(startTimestamp).getTime()) //
+                // just the selected station
+                .filter(x -> x.name.equalsIgnoreCase(name)) //
+                // sort by time
+                .sorted((x, y) -> Long.compare(x.time, y.time)) //
+                // collect
+                .toList() //
+                // deal with missing entries
+                .map(x -> {
+                    // trim all missing entries from the start and finish
+                    List<Entry> v = Stream //
+                            .from(x) //
+                            .skipUntil(y -> y.value.isPresent()) //
+                            .reverse() //
+                            .skipUntil(y -> y.value.isPresent()) //
+                            .reverse() //
+                            .toList() //
+                            .get();
+
+                    // fix missing using average where possible or repeating previous value
+                    for (int i = 1; i < v.size() - 1; i++) {
+                        Entry entry = v.get(i);
+                        if (!entry.value.isPresent()) {
+                            if (v.get(i + 1).value.isPresent()) {
+                                Entry entry2 = new Entry(entry.name, entry.time, Optional.of(
+                                        (v.get(i - 1).value.get() + v.get(i + 1).value.get()) / 2));
+                                v.set(i, entry2);
+                            } else {
+                                Entry entry2 = new Entry(entry.name, entry.time,
+                                        Optional.of(v.get(i - 1).value.get()));
+                                v.set(i, entry2);
                             }
                         }
+                    }
 
-                        // any missing entries set them to the average of the value before and after
-                        return v;
-                    }).get();
+                    // any missing entries set them to the average of the value before and after
+                    return v;
+                }).get();
 
-            int windowLength = 24;
+        // Solve Ax = y for x
 
-            // Solve Ax = y for x
+        // calculate the pseudo inverse of A
+        SimpleMatrix aInv = getPseudoInverse(list, WINDOW_LENGTH);
 
-            // calculate the pseudo inverse of A
-            SimpleMatrix aInv = getPseudoInverse(list, windowLength);
+        SimpleMatrix y = new SimpleMatrix(list.size(), 1);
+        for (int i = 0; i < list.size(); i++) {
+            y.set(i, 0, list.get(i).value.get());
+        }
 
-            SimpleMatrix y = new SimpleMatrix(list.size(), 1);
-            for (int i = 0; i < list.size(); i++) {
-                y.set(i, 0, list.get(i).value.get());
-            }
+        // Then Ainv . A x = Ainv . y
+        // Therefore x = Ainv . y
 
-            // Then Ainv . A x = Ainv . y
-            // Therefore x = Ainv . y
+        SimpleMatrix z = aInv.mult(y);
 
-            SimpleMatrix z = aInv.mult(y);
+        return new Result(list, z);
 
-            File outfile = new File("src/output/" + name + ".csv");
-            outfile.getParentFile().mkdirs();
-            try (PrintStream out = new PrintStream(outfile)) {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                for (int i = 0; i < list.size(); i++) {
-                    out.println(sdf.format(new Date(list.get(i).time)) + "\t"
-                            + z.get(i + windowLength - 1, 0));
-                }
-            }
+    }
 
-            DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-
+    private static void saveDataForExcel(List<Entry> list, SimpleMatrix z, File output)
+            throws FileNotFoundException {
+        output.getParentFile().mkdirs();
+        try (PrintStream out = new PrintStream(output)) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            sdf.setTimeZone(TimeZone.getTimeZone("GMT+11:00"));
             for (int i = 0; i < list.size(); i++) {
-                dataset.addValue(Math.max(0, z.get(i + windowLength - 1, 0)), name,
-                        sdf.format(new Date(list.get(i).time)));
+                out.println(sdf.format(new Date(list.get(i).time)) + "\t"
+                        + z.get(i + WINDOW_LENGTH - 1, 0));
             }
-            DefaultCategoryDataset dataset2 = new DefaultCategoryDataset();
-            for (int i = 0; i < list.size(); i++) {
-                dataset2.addValue(list.get(i).value.orElse(0.0), name + " 24 hr rolling avg",
-                        sdf.format(new Date(list.get(i).time)));
-            }
-            JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
-                    "PM 2.5 Raw", dataset);
-            chart.getCategoryPlot().setDataset(0, dataset2);
-            chart.getCategoryPlot().setDataset(1, dataset);
-            chart.getCategoryPlot().setRenderer(0, new LineAndShapeRenderer());
-            chart.getCategoryPlot().setRenderer(1, new BarRenderer());
-            CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
-            axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
-            ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
-            rangeAxis.setLowerBound(0);
-            rangeAxis.setUpperBound(1500);
-            ChartUtils.saveChartAsPNG(new File("target/" + name + ".png"), chart,
-                    (int) Math.round(list.size() / 0.0395), 1200);
-            System.out.println("saved chart as png");
+        }
+    }
+
+    private static void saveChart(List<Entry> list, SimpleMatrix z, String name,
+            String chartFilename) throws IOException {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sdf.setTimeZone(TimeZone.getTimeZone("GMT+11:00"));
+        for (int i = 0; i < list.size(); i++) {
+            dataset.addValue(Math.max(0, z.get(i + WINDOW_LENGTH - 1, 0)), name,
+                    sdf.format(new Date(list.get(i).time)));
+        }
+        DefaultCategoryDataset dataset2 = new DefaultCategoryDataset();
+        for (int i = 0; i < list.size(); i++) {
+            dataset2.addValue(list.get(i).value.orElse(0.0), name + " 24 hr rolling avg",
+                    sdf.format(new Date(list.get(i).time)));
+        }
+        JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
+                "PM 2.5 Raw", dataset);
+        chart.getCategoryPlot().setDataset(0, dataset2);
+        chart.getCategoryPlot().setDataset(1, dataset);
+        chart.getCategoryPlot().setRenderer(0, new LineAndShapeRenderer());
+        chart.getCategoryPlot().setRenderer(1, new BarRenderer());
+        CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
+        axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
+        ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
+        rangeAxis.setLowerBound(0);
+        rangeAxis.setUpperBound(1500);
+        ChartUtils.saveChartAsPNG(new File(chartFilename), chart,
+                (int) Math.round(list.size() / 0.0395), 1200);
+        System.out.println("saved chart as png");
+
+    }
+
+    public static final class Result {
+        private final List<Entry> list;
+        private final SimpleMatrix z;
+
+        public Result(List<Entry> list, SimpleMatrix z) {
+            this.list = list;
+            this.z = z;
+        }
+
+        public List<Entry> entries() {
+            return list;
+        }
+
+        public SimpleMatrix z() {
+            return z;
         }
     }
 
