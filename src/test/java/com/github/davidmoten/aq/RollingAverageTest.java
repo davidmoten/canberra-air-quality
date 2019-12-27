@@ -137,22 +137,24 @@ public class RollingAverageTest {
             }
 
             DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             sdf.setTimeZone(TimeZone.getTimeZone("GMT+11:00"));
             for (int i = 0; i < list.size(); i++) {
                 dataset.addValue(Math.max(0, z.get(i + windowLength - 1, 0)), name,
                         sdf.format(new Date(list.get(i).time)));
             }
+            DefaultCategoryDataset dataset2 = new DefaultCategoryDataset();
             for (int i = 0; i < list.size(); i++) {
-                dataset.addValue(list.get(i).value.orElse(0.0), name + " rolling avg",
+                dataset2.addValue(list.get(i).value.orElse(0.0), name + " rolling avg",
                         sdf.format(new Date(list.get(i).time)));
             }
             JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
                     "PM 2.5 Raw", dataset);
-            chart.getCategoryPlot().setDataset(0, dataset);
+            chart.getCategoryPlot().setDataset(0, dataset2);
             chart.getCategoryPlot().setDataset(1, dataset);
-            chart.getCategoryPlot().setRenderer(0, new BarRenderer());
-            chart.getCategoryPlot().setRenderer(1, new LineAndShapeRenderer());
+            chart.getCategoryPlot().setRenderer(0, new LineAndShapeRenderer());
+            chart.getCategoryPlot().setRenderer(1, new BarRenderer());
             CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
             axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
             ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
