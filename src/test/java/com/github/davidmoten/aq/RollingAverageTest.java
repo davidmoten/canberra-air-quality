@@ -40,7 +40,7 @@ import org.junit.Test;
 public class RollingAverageTest {
 
     private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
-    private static final String START_TIMESTAMP = "18/12/2019 01:00:00 AM";
+    private static final String START_TIMESTAMP = "1/12/2019 01:00:00 AM";
     static final SimpleDateFormat sdf = createSdf();
 
     private static SimpleDateFormat createSdf() {
@@ -146,7 +146,7 @@ public class RollingAverageTest {
             }
             DefaultCategoryDataset dataset2 = new DefaultCategoryDataset();
             for (int i = 0; i < list.size(); i++) {
-                dataset2.addValue(list.get(i).value.orElse(0.0), name + " rolling avg",
+                dataset2.addValue(list.get(i).value.orElse(0.0), name + " 24 hr rolling avg",
                         sdf.format(new Date(list.get(i).time)));
             }
             JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
@@ -160,7 +160,8 @@ public class RollingAverageTest {
             ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
             rangeAxis.setLowerBound(0);
             rangeAxis.setUpperBound(2000);
-            ChartUtils.saveChartAsPNG(new File("target/" + name + ".png"), chart, 6000, 1200);
+            ChartUtils.saveChartAsPNG(new File("target/" + name + ".png"), chart,
+                    (int) Math.round(list.size() / 0.0395), 1200);
             System.out.println("saved chart as png");
         }
     }
