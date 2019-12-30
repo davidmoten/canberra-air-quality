@@ -13,9 +13,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
-import org.ejml.data.DMatrixRMaj;
-import org.ejml.dense.row.factory.LinearSolverFactory_DDRM;
-import org.ejml.interfaces.linsol.LinearSolverDense;
 import org.ejml.simple.SimpleMatrix;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
@@ -44,7 +41,7 @@ public class RollingAverageTest {
     private static final String[] STATIONS = { "Civic", "Florey", "Monash" };
     private static final String START_TIMESTAMP = "16/12/2019 00:00:00 AM";
     private static final String FINISH_TIMESTAMP = "01/01/2025 00:00:00 AM";
-    
+
     @Test
     public void extractRawValuesAndPersist() throws IOException {
         for (String name : STATIONS) {
@@ -55,7 +52,6 @@ public class RollingAverageTest {
         }
     }
 
-    
     private static void saveDataForExcel(List<Entry> list, SimpleMatrix z, File output)
             throws FileNotFoundException {
         output.getParentFile().mkdirs();
@@ -70,25 +66,33 @@ public class RollingAverageTest {
 
     private static void saveChart(List<Entry> list, SimpleMatrix z, String name,
             String chartFilename) throws IOException {
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        DefaultCategoryDataset rawHourlyDataset = new DefaultCategoryDataset();
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         sdf.setTimeZone(TimeZone.getTimeZone("GMT+11:00"));
         for (int i = 0; i < list.size(); i++) {
-            dataset.addValue(Math.max(0, z.get(i + WINDOW_LENGTH - 1, 0)), name,
+            rawHourlyDataset.addValue(Math.max(0, z.get(i + WINDOW_LENGTH - 1, 0)), name,
                     sdf.format(new Date(list.get(i).time)));
         }
-        DefaultCategoryDataset dataset2 = new DefaultCategoryDataset();
+        DefaultCategoryDataset rollingAverageDataset = new DefaultCategoryDataset();
         for (int i = 0; i < list.size(); i++) {
-            dataset2.addValue(list.get(i).value.orElse(0.0), name + " 24 hr rolling avg",
+            rollingAverageDataset.addValue(list.get(i).value.orElse(0.0),
+                    name + " 24 hr rolling avg", sdf.format(new Date(list.get(i).time)));
+        }
+        DefaultCategoryDataset threshold = new DefaultCategoryDataset();
+        for (int i = 0; i < list.size(); i++) {
+            threshold.addValue(200, "Hazardous Threshold PM 2.5 ug/m3",
                     sdf.format(new Date(list.get(i).time)));
         }
         JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
-                "PM 2.5 Raw", dataset);
-        chart.getCategoryPlot().setDataset(0, dataset2);
-        chart.getCategoryPlot().setDataset(1, dataset);
+                "PM 2.5 Raw", rawHourlyDataset);
+        chart.getCategoryPlot().setDataset(0, rollingAverageDataset);
+        chart.getCategoryPlot().setDataset(1, threshold);
+        chart.getCategoryPlot().setDataset(2, rawHourlyDataset);
         chart.getCategoryPlot().setRenderer(0, new LineAndShapeRenderer());
-        chart.getCategoryPlot().setRenderer(1, new BarRenderer());
+        LineAndShapeRenderer thresholdRenderer = new LineAndShapeRenderer();
+        chart.getCategoryPlot().setRenderer(1, thresholdRenderer);
+        chart.getCategoryPlot().setRenderer(2, new BarRenderer());
         CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
         axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
         ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
