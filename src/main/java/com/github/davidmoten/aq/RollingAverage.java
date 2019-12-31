@@ -45,7 +45,7 @@ public final class RollingAverage {
                 // ignore if no timestamp present
                 .filter(x -> x[1].length() > 0) //
                 // parse the time and the PM2.5 value
-                .map(x -> new Entry(x[0], toTime(x[1]), getDouble(x[12]))) //
+                .map(x -> new Entry(x[0], toTime(x[1]), getDouble(x[6]), getDouble(x[12]))) //
                 // only since start time inclusive
                 .filter(x -> x.time >= SDF.parse(startTimestamp).getTime()) //
                 // only before finish time exclusive
@@ -73,11 +73,11 @@ public final class RollingAverage {
                         Entry entry = v.get(i);
                         if (!entry.value.isPresent()) {
                             if (v.get(i + 1).value.isPresent()) {
-                                Entry entry2 = new Entry(entry.name, entry.time, Optional.of(
+                                Entry entry2 = new Entry(entry.name, entry.time, entry.raw, Optional.of(
                                         (v.get(i - 1).value.get() + v.get(i + 1).value.get()) / 2));
                                 v.set(i, entry2);
                             } else {
-                                Entry entry2 = new Entry(entry.name, entry.time,
+                                Entry entry2 = new Entry(entry.name, entry.time, entry.raw,
                                         Optional.of(v.get(i - 1).value.get()));
                                 v.set(i, entry2);
                             }
@@ -106,7 +106,7 @@ public final class RollingAverage {
         return new Result(list, z);
 
     }
-    
+
     private static SimpleMatrix getPseudoInverse(List<Entry> list, int windowLength) {
         LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.pseudoInverse(true);
         DMatrixRMaj m = new DMatrixRMaj(list.size(), list.size() + windowLength - 1);
@@ -123,7 +123,6 @@ public final class RollingAverage {
 
         return new SimpleMatrix(inv);
     }
-
 
     private static Optional<Double> getDouble(String s) {
         try {
@@ -144,11 +143,13 @@ public final class RollingAverage {
     public static final class Entry {
         public final String name;
         public final long time;
+        public final Optional<Double> raw;
         public final Optional<Double> value;
 
-        public Entry(String name, long time, Optional<Double> value) {
+        public Entry(String name, long time, Optional<Double> raw, Optional<Double> value) {
             this.name = name;
             this.time = time;
+            this.raw = raw;
             this.value = value;
         }
 
