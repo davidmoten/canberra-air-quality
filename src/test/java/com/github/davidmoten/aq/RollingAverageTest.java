@@ -103,7 +103,7 @@ public class RollingAverageTest {
         axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
         ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
         rangeAxis.setLowerBound(0);
-        rangeAxis.setUpperBound(1500);
+        rangeAxis.setUpperBound(5000);
         ChartUtils.saveChartAsPNG(new File(chartFilename), chart,
                 (int) Math.round(list.size() / 0.0395), 1200);
         System.out.println("saved chart as png");
