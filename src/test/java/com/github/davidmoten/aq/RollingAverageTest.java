@@ -12,6 +12,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import org.ejml.simple.SimpleMatrix;
 import org.jfree.chart.ChartFactory;
@@ -49,6 +50,17 @@ public class RollingAverageTest {
                     "target/" + name + ".png");
             saveDataForExcel(r.entries(), r.z(), new File("target/" + name + ".csv"));
             saveChart(r.entries(), r.z(), name, "target/" + name + ".png");
+        }
+    }
+    
+    @Test
+    public void extractRawValuesAndPersist2() throws IOException {
+        for (String name : STATIONS) {
+            String start = RollingAverage.SDF.format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
+            String finish = RollingAverage.SDF.format(new Date());
+            Result r = RollingAverage.extractDataAndChart(name, start, finish,
+                    "target/" + name + ".png");
+            saveChart(r.entries(), r.z(), name, "target/" + name + "2.png");
         }
     }
 
