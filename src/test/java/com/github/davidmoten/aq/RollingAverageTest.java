@@ -28,6 +28,12 @@ import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.junit.Test;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 /**
  * Example input lines downloaded from ACT gov portal
  * 
@@ -54,28 +60,41 @@ public class RollingAverageTest {
     @Test
     public void extractRawValuesAndPersist2() throws IOException {
         for (String name : STATIONS) {
-            String start = RollingAverage.SDF
-                    .format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
+            String start = RollingAverage.SDF.format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
             String finish = RollingAverage.SDF.format(new Date());
             Result r = RollingAverage2.extractData(name, start, finish);
             saveChart(r.entries(), r.z(), name, "target/" + name + "2.png", Optional.empty());
         }
     }
 
-    private static void saveDataForExcel(List<Entry> list, SimpleMatrix z, File output)
-            throws FileNotFoundException {
+    @Test
+    public void test() throws JsonParseException, IOException {
+        JsonFactory factory = new JsonFactory();
+        JsonParser p = factory.createParser(RollingAverageTest.class.getResourceAsStream("/air.json"));
+        p.nextToken();
+        p.nextToken();
+        ObjectMapper mapper = new ObjectMapper();
+        while (true) {
+            Record n = mapper.readValue(p, Record.class);
+            if (n == null) {
+                break;
+            }
+            System.out.println(n);
+        }
+    }
+
+    private static void saveDataForExcel(List<Entry> list, SimpleMatrix z, File output) throws FileNotFoundException {
         output.getParentFile().mkdirs();
         try (PrintStream out = new PrintStream(output)) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             for (int i = 0; i < list.size(); i++) {
-                out.println(sdf.format(new Date(list.get(i).time)) + "\t"
-                        + z.get(i + WINDOW_LENGTH - 1, 0));
+                out.println(sdf.format(new Date(list.get(i).time)) + "\t" + z.get(i + WINDOW_LENGTH - 1, 0));
             }
         }
     }
 
-    private static void saveChart(List<Entry> list, SimpleMatrix z, String name,
-            String chartFilename, Optional<Double> upperBound) throws IOException {
+    private static void saveChart(List<Entry> list, SimpleMatrix z, String name, String chartFilename,
+            Optional<Double> upperBound) throws IOException {
         DefaultCategoryDataset rawHourlyDataset = new DefaultCategoryDataset();
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -86,21 +105,19 @@ public class RollingAverageTest {
             if (val > max) {
                 max = val;
             }
-            rawHourlyDataset.addValue(Math.max(0, val), name,
-                    sdf.format(new Date(list.get(i).time)));
+            rawHourlyDataset.addValue(Math.max(0, val), name, sdf.format(new Date(list.get(i).time)));
         }
         DefaultCategoryDataset rollingAverageDataset = new DefaultCategoryDataset();
         for (int i = 0; i < list.size(); i++) {
-            rollingAverageDataset.addValue(list.get(i).value.orElse(0.0),
-                    name + " 24 hr rolling avg", sdf.format(new Date(list.get(i).time)));
+            rollingAverageDataset.addValue(list.get(i).value.orElse(0.0), name + " 24 hr rolling avg",
+                    sdf.format(new Date(list.get(i).time)));
         }
         DefaultCategoryDataset threshold = new DefaultCategoryDataset();
         for (int i = 0; i < list.size(); i++) {
-            threshold.addValue(200, "Hazardous Threshold PM 2.5 ug/m3",
-                    sdf.format(new Date(list.get(i).time)));
+            threshold.addValue(200, "Hazardous Threshold PM 2.5 ug/m3", sdf.format(new Date(list.get(i).time)));
         }
-        JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
-                "PM 2.5 Raw", rawHourlyDataset);
+        JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time", "PM 2.5 Raw",
+                rawHourlyDataset);
         CategoryPlot plot = chart.getCategoryPlot();
         plot.setDataset(0, rollingAverageDataset);
         plot.setDataset(1, threshold);
@@ -114,8 +131,7 @@ public class RollingAverageTest {
         ValueAxis rangeAxis = plot.getRangeAxis();
         rangeAxis.setLowerBound(0);
         rangeAxis.setUpperBound(upperBound.orElse((Math.floor(max / 500) + 1) * 500));
-        ChartUtils.saveChartAsPNG(new File(chartFilename), chart,
-                (int) Math.round(list.size() / 0.0395), 1200);
+        ChartUtils.saveChartAsPNG(new File(chartFilename), chart, (int) Math.round(list.size() / 0.0395), 1200);
         System.out.println("saved chart as png");
 
     }
@@ -129,8 +145,7 @@ public class RollingAverageTest {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         dataset.addValue(10, "Civic", "2019-12-23 01:00");
         dataset.addValue(16, "Civic", "2019-12-23 02:00");
-        JFreeChart chart = ChartFactory.createBarChart("Civic" + " hourly PM 2.5", "Time",
-                "PM 2.5 Raw", dataset);
+        JFreeChart chart = ChartFactory.createBarChart("Civic" + " hourly PM 2.5", "Time", "PM 2.5 Raw", dataset);
         ChartUtils.saveChartAsPNG(new File("target/chart.png"), chart, 2000, 1200);
         System.out.println("saved chart as png");
     }
