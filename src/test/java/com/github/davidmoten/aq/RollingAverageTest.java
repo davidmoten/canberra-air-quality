@@ -11,6 +11,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -21,6 +22,7 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
@@ -46,21 +48,20 @@ public class RollingAverageTest {
     @Test
     public void extractRawValuesAndPersist() throws IOException {
         for (String name : STATIONS) {
-            Result r = RollingAverage.extractDataAndChart(name, START_TIMESTAMP, FINISH_TIMESTAMP,
-                    "target/" + name + ".png");
+            Result r = RollingAverage.extractData(name, START_TIMESTAMP, FINISH_TIMESTAMP);
             saveDataForExcel(r.entries(), r.z(), new File("target/" + name + ".csv"));
-            saveChart(r.entries(), r.z(), name, "target/" + name + ".png");
+            saveChart(r.entries(), r.z(), name, "target/" + name + ".png", Optional.of(5000.0));
         }
     }
-    
+
     @Test
     public void extractRawValuesAndPersist2() throws IOException {
         for (String name : STATIONS) {
-            String start = RollingAverage.SDF.format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
+            String start = RollingAverage.SDF
+                    .format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
             String finish = RollingAverage.SDF.format(new Date());
-            Result r = RollingAverage.extractDataAndChart(name, start, finish,
-                    "target/" + name + ".png");
-            saveChart(r.entries(), r.z(), name, "target/" + name + "2.png");
+            Result r = RollingAverage.extractData(name, start, finish);
+            saveChart(r.entries(), r.z(), name, "target/" + name + "2.png", Optional.empty());
         }
     }
 
@@ -77,13 +78,18 @@ public class RollingAverageTest {
     }
 
     private static void saveChart(List<Entry> list, SimpleMatrix z, String name,
-            String chartFilename) throws IOException {
+            String chartFilename, Optional<Double> upperBound) throws IOException {
         DefaultCategoryDataset rawHourlyDataset = new DefaultCategoryDataset();
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         sdf.setTimeZone(TimeZone.getTimeZone("GMT+11:00"));
+        double max = 0;
         for (int i = 0; i < list.size(); i++) {
-            rawHourlyDataset.addValue(Math.max(0, z.get(i + WINDOW_LENGTH - 1, 0)), name,
+            double val = z.get(i + WINDOW_LENGTH - 1, 0);
+            if (val > max) {
+                max = val;
+            }
+            rawHourlyDataset.addValue(Math.max(0, val), name,
                     sdf.format(new Date(list.get(i).time)));
         }
         DefaultCategoryDataset pm25Dataset = new DefaultCategoryDataset();
@@ -104,18 +110,19 @@ public class RollingAverageTest {
         JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
                 "PM 2.5 Raw", rawHourlyDataset);
 //        chart.getCategoryPlot().setDataset(0, pm25Dataset);
-        chart.getCategoryPlot().setDataset(0, rollingAverageDataset);
-        chart.getCategoryPlot().setDataset(1, threshold);
-        chart.getCategoryPlot().setDataset(2, rawHourlyDataset);
-        chart.getCategoryPlot().setRenderer(0, new LineAndShapeRenderer());
+        CategoryPlot plot = chart.getCategoryPlot();
+        plot.setDataset(0, rollingAverageDataset);
+        plot.setDataset(1, threshold);
+        plot.setDataset(2, rawHourlyDataset);
+        plot.setRenderer(0, new LineAndShapeRenderer());
         LineAndShapeRenderer thresholdRenderer = new LineAndShapeRenderer();
-        chart.getCategoryPlot().setRenderer(1, thresholdRenderer);
-        chart.getCategoryPlot().setRenderer(2, new BarRenderer());
-        CategoryAxis axis = chart.getCategoryPlot().getDomainAxis();
+        plot.setRenderer(1, thresholdRenderer);
+        plot.setRenderer(2, new BarRenderer());
+        CategoryAxis axis = plot.getDomainAxis();
         axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
-        ValueAxis rangeAxis = chart.getCategoryPlot().getRangeAxis();
+        ValueAxis rangeAxis = plot.getRangeAxis();
         rangeAxis.setLowerBound(0);
-        rangeAxis.setUpperBound(5000);
+        rangeAxis.setUpperBound(upperBound.orElse((Math.floor(max / 500) + 1) * 500));
         ChartUtils.saveChartAsPNG(new File(chartFilename), chart,
                 (int) Math.round(list.size() / 0.0395), 1200);
         System.out.println("saved chart as png");

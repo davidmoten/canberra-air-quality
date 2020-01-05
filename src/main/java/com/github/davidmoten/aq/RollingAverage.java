@@ -27,8 +27,8 @@ public final class RollingAverage {
         return s;
     }
 
-    public static Result extractDataAndChart(String name, String startTimestamp,
-            String finishTimestamp, String chartFilename)
+    public static Result extractData(String name, String startTimestamp,
+            String finishTimestamp)
             throws FileNotFoundException, IOException {
         System.out.println(name);
         List<Entry> list = Stream
