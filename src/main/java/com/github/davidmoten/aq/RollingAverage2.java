@@ -2,7 +2,6 @@ package com.github.davidmoten.aq;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -10,12 +9,15 @@ import java.util.Optional;
 import java.util.TimeZone;
 
 import org.davidmoten.kool.Stream;
+import org.davidmoten.kool.json.Json;
 import org.ejml.data.DMatrixRMaj;
 import org.ejml.dense.row.factory.LinearSolverFactory_DDRM;
 import org.ejml.interfaces.linsol.LinearSolverDense;
 import org.ejml.simple.SimpleMatrix;
 
-public final class RollingAverage {
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
+public final class RollingAverage2 {
 
     public static final SimpleDateFormat SDF = createSdf();
     public static final int WINDOW_LENGTH = 24;
@@ -26,25 +28,24 @@ public final class RollingAverage {
         return s;
     }
 
-    public static Result extractData(String name, String startTimestamp,
-            String finishTimestamp)
+    public static Result extractData(String name, String startTimestamp, String finishTimestamp)
             throws FileNotFoundException, IOException {
         System.out.println(name);
-        List<Entry> list = Stream
-                .lines(() -> RollingAverage.class.getResourceAsStream("/air.csv"),
-                        StandardCharsets.UTF_8) //
-                // skip header line
-                .skip(1) //
-                // skip blank lines
-                .filter(x -> x.length() > 0) //
-                // remove the quoted geolocation
-                .map(x -> x.replaceAll("\".*\",", "")) //
-                // get items in row
-                .map(x -> x.split(",")) //
-                // ignore if no timestamp present
-                .filter(x -> x[1].length() > 0) //
-                // parse the time and the PM2.5 value
-                .map(x -> new Entry(x[0], toTime(x[1]), getDouble(x[12]))) //
+        List<Entry> list = Json //
+                .stream(() -> RollingAverage2.class.getResourceAsStream("/air.json")) //
+                .arrayNode() //
+                .flatMap(node -> {
+                    ArrayNode nd = node.get();
+                    String t = nd.get("datetime").asText();
+                    double d = nd.get("aqi_pm2_5").asDouble(-1);
+                    final Optional<Double> value;
+                    if (d == -1) {
+                        value = Optional.empty();
+                    } else {
+                        value = Optional.of(d);
+                    }
+                    return Stream.of(new Entry(name, parseTime(t), value));
+                })
                 // only since start time inclusive
                 .filter(x -> x.time >= SDF.parse(startTimestamp).getTime()) //
                 // only before finish time exclusive
@@ -76,7 +77,8 @@ public final class RollingAverage {
                                         (v.get(i - 1).value.get() + v.get(i + 1).value.get()) / 2));
                                 v.set(i, entry2);
                             } else {
-                                Entry entry2 = new Entry(entry.name, entry.time, Optional.of(v.get(i - 1).value.get()));
+                                Entry entry2 = new Entry(entry.name, entry.time,
+                                        Optional.of(v.get(i - 1).value.get()));
                                 v.set(i, entry2);
                             }
                         }
@@ -122,19 +124,31 @@ public final class RollingAverage {
         return new SimpleMatrix(inv);
     }
 
-    private static Optional<Double> getDouble(String s) {
+    private static long parseTime(String s) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-DD'T'hh:mm:ss.SSS");
         try {
-            return Optional.of(Double.parseDouble(s));
-        } catch (NumberFormatException e) {
-            return Optional.empty();
-        }
-    }
-
-    private static long toTime(String s) {
-        try {
-            return SDF.parse(s).getTime();
+            return sdf.parse(s).getTime();
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
+    }
+    
+    public static void main(String[] args) {
+        Json //
+        .stream(() -> RollingAverage2.class.getResourceAsStream("/air.json")) //
+        .arrayNode() //
+        .flatMap(node -> {
+            ArrayNode nd = node.get();
+            String t = nd.get("datetime").asText();
+            double d = nd.get("aqi_pm2_5").asDouble(-1);
+            final Optional<Double> value;
+            if (d == -1) {
+                value = Optional.empty();
+            } else {
+                value = Optional.of(d);
+            }
+            return Stream.of(new Entry("test", parseTime(t), value));
+        })
+        .println();
     }
 }

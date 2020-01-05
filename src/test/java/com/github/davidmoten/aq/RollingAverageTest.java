@@ -28,9 +28,6 @@ import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.junit.Test;
 
-import com.github.davidmoten.aq.RollingAverage.Entry;
-import com.github.davidmoten.aq.RollingAverage.Result;
-
 /**
  * Example input lines downloaded from ACT gov portal
  * 
@@ -48,7 +45,7 @@ public class RollingAverageTest {
     @Test
     public void extractRawValuesAndPersist() throws IOException {
         for (String name : STATIONS) {
-            Result r = RollingAverage.extractData(name, START_TIMESTAMP, FINISH_TIMESTAMP);
+            Result r = RollingAverage2.extractData(name, START_TIMESTAMP, FINISH_TIMESTAMP);
             saveDataForExcel(r.entries(), r.z(), new File("target/" + name + ".csv"));
             saveChart(r.entries(), r.z(), name, "target/" + name + ".png", Optional.of(5000.0));
         }
@@ -60,7 +57,7 @@ public class RollingAverageTest {
             String start = RollingAverage.SDF
                     .format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
             String finish = RollingAverage.SDF.format(new Date());
-            Result r = RollingAverage.extractData(name, start, finish);
+            Result r = RollingAverage2.extractData(name, start, finish);
             saveChart(r.entries(), r.z(), name, "target/" + name + "2.png", Optional.empty());
         }
     }
@@ -92,11 +89,6 @@ public class RollingAverageTest {
             rawHourlyDataset.addValue(Math.max(0, val), name,
                     sdf.format(new Date(list.get(i).time)));
         }
-        DefaultCategoryDataset pm25Dataset = new DefaultCategoryDataset();
-        for (int i = 0; i < list.size(); i++) {
-            pm25Dataset.addValue(list.get(i).raw.orElse(0.0) * 2, name + " PM 2.5",
-                    sdf.format(new Date(list.get(i).time)));
-        }
         DefaultCategoryDataset rollingAverageDataset = new DefaultCategoryDataset();
         for (int i = 0; i < list.size(); i++) {
             rollingAverageDataset.addValue(list.get(i).value.orElse(0.0),
@@ -109,7 +101,6 @@ public class RollingAverageTest {
         }
         JFreeChart chart = ChartFactory.createBarChart(name + " hourly raw PM 2.5", "Time",
                 "PM 2.5 Raw", rawHourlyDataset);
-//        chart.getCategoryPlot().setDataset(0, pm25Dataset);
         CategoryPlot plot = chart.getCategoryPlot();
         plot.setDataset(0, rollingAverageDataset);
         plot.setDataset(1, threshold);
