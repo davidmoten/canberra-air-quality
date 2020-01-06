@@ -51,7 +51,7 @@ public class RollingAverageTest {
     @Test
     public void extractRawValuesAndPersist() throws IOException {
         for (String name : STATIONS) {
-            Result r = RollingAverage2.extractData(name, START_TIMESTAMP, FINISH_TIMESTAMP);
+            Result r = RollingAverage.extractData(name, START_TIMESTAMP, FINISH_TIMESTAMP);
             saveDataForExcel(r.entries(), r.z(), new File("target/" + name + ".csv"));
             saveChart(r.entries(), r.z(), name, "target/" + name + ".png", Optional.of(5000.0));
         }
@@ -62,7 +62,7 @@ public class RollingAverageTest {
         for (String name : STATIONS) {
             String start = RollingAverage.SDF.format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
             String finish = RollingAverage.SDF.format(new Date());
-            Result r = RollingAverage2.extractData(name, start, finish);
+            Result r = RollingAverage.extractData(name, start, finish);
             saveChart(r.entries(), r.z(), name, "target/" + name + "2.png", Optional.empty());
         }
     }
