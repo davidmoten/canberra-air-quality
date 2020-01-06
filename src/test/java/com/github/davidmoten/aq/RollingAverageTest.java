@@ -58,7 +58,17 @@ public class RollingAverageTest {
     }
 
     @Test
-    public void extractRawValuesAndPersist2() throws IOException {
+    public void extractRawValuesAndPersistRecentJson() throws IOException {
+        for (String name : STATIONS) {
+            String start = RollingAverage.SDF.format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
+            String finish = RollingAverage.SDF.format(new Date());
+            Result r = RollingAverage2.extractData(name, start, finish);
+            saveChart(r.entries(), r.z(), name, "target/" + name + "2j.png", Optional.empty());
+        }
+    }
+    
+    @Test
+    public void extractRawValuesAndRecentCsv() throws IOException {
         for (String name : STATIONS) {
             String start = RollingAverage.SDF.format(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
             String finish = RollingAverage.SDF.format(new Date());

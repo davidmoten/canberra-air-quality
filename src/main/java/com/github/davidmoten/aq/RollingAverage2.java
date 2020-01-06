@@ -2,10 +2,9 @@ package com.github.davidmoten.aq;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.text.ParseException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.Optional;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
@@ -17,14 +16,13 @@ import org.ejml.interfaces.linsol.LinearSolverDense;
 import org.ejml.simple.SimpleMatrix;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
 public final class RollingAverage2 {
 
     public static final SimpleDateFormat SDF = createSdf();
     public static final int WINDOW_LENGTH = 24;
-    
+
     private static final ObjectMapper MAPPER = createObjectMapper();
 
     private static SimpleDateFormat createSdf() {
@@ -43,52 +41,42 @@ public final class RollingAverage2 {
     public static Result extractData(String name, String startTimestamp, String finishTimestamp)
             throws FileNotFoundException, IOException {
         System.out.println(name);
-        List<Entry> list = Json //
-                .stream(() -> RollingAverage2.class.getResourceAsStream("/air.json")) //
-                .withMapper(MAPPER) //
-                .arrayNode() //
-                .flatMap(node -> node.values(Record.class))
-                // only since start time inclusive
-                .filter(x -> x.time.getTime() >= SDF.parse(startTimestamp).getTime()) //
-                // only before finish time exclusive
-                .filter(x -> x.time.getTime() < SDF.parse(finishTimestamp).getTime()) //
-                // sort by time
-                .sorted((x, y) -> x.time.compareTo(y.time)) //
-                // collect
-                .toList() //
-                // deal with missing entries
-                .map(x -> {
-                    // trim all missing entries from the start and finish
-                    List<Record> w = Stream //
-                            .from(x) //
-                            .skipUntil(y -> y.value().isPresent()) //
-                            .reverse() //
-                            .skipUntil(y -> y.value().isPresent()) //
-                            .reverse() //
-                            .toList() //
-                            .get();
+        List<Entry> list;
+        try (InputStream in = RollingAverage2.class.getResourceAsStream("/air.json")) {
+            list = Json //
+                    .stream(in) //
+                    .withMapper(MAPPER) //
+                    .arrayNode() //
+                    .flatMap(node -> node.values(Record.class))
+                    // only since start time inclusive
+                    .filter(x -> x.time.getTime() >= SDF.parse(startTimestamp).getTime()) //
+                    // only before finish time exclusive
+                    .filter(x -> x.time.getTime() < SDF.parse(finishTimestamp).getTime()) //
+                    // sort by time
+                    .sorted((x, y) -> x.time.compareTo(y.time)) //
+                    // collect
+                    .toList() //
+                    // deal with missing entries
+                    .map(x -> {
+                        // trim all missing entries from the start and finish
+                        List<Record> w = Stream //
+                                .from(x) //
+                                .skipUntil(y -> y.value().isPresent()) //
+                                .reverse() //
+                                .skipUntil(y -> y.value().isPresent()) //
+                                .reverse() //
+                                .toList() //
+                                .get();
 
-                    List<Entry> v = w.stream().map(rec -> new Entry(name, rec.time.getTime(), rec.value()))
-                            .collect(Collectors.toList());
+                        List<Entry> v = w.stream().map(rec -> new Entry(name, rec.time.getTime(), rec.value()))
+                                .collect(Collectors.toList());
 
-                    // fix missing using average where possible or repeating previous value
-                    for (int i = 1; i < v.size() - 1; i++) {
-                        Entry entry = v.get(i);
-                        if (!entry.value.isPresent()) {
-                            if (v.get(i + 1).value.isPresent()) {
-                                Entry entry2 = new Entry(entry.name, entry.time,
-                                        Optional.of((v.get(i - 1).value.get() + v.get(i + 1).value.get()) / 2));
-                                v.set(i, entry2);
-                            } else {
-                                Entry entry2 = new Entry(entry.name, entry.time, Optional.of(v.get(i - 1).value.get()));
-                                v.set(i, entry2);
-                            }
-                        }
-                    }
+                        Util.patchHoles(v);
 
-                    // any missing entries set them to the average of the value before and after
-                    return v;
-                }).get();
+                        return v;
+                    }).get();
+
+        }
 
         // Solve Ax = y for x
 
@@ -126,30 +114,4 @@ public final class RollingAverage2 {
         return new SimpleMatrix(inv);
     }
 
-    private static long parseTime(String s) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-DD'T'hh:mm:ss.SSS");
-        try {
-            return sdf.parse(s).getTime();
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static void main(String[] args) {
-        Json //
-                .stream(() -> RollingAverage2.class.getResourceAsStream("/air.json")) //
-                .arrayNode() //
-                .flatMap(node -> {
-                    ArrayNode nd = node.get();
-                    String t = nd.get("datetime").asText();
-                    double d = nd.get("aqi_pm2_5").asDouble(-1);
-                    final Optional<Double> value;
-                    if (d == -1) {
-                        value = Optional.empty();
-                    } else {
-                        value = Optional.of(d);
-                    }
-                    return Stream.of(new Entry("test", parseTime(t), value));
-                }).println();
-    }
 }
