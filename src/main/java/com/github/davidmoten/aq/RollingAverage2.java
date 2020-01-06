@@ -48,7 +48,6 @@ public final class RollingAverage2 {
                 .withMapper(MAPPER) //
                 .arrayNode() //
                 .flatMap(node -> node.values(Record.class))
-                .println() //
                 // only since start time inclusive
                 .filter(x -> x.time.getTime() >= SDF.parse(startTimestamp).getTime()) //
                 // only before finish time exclusive

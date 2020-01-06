@@ -67,22 +67,6 @@ public class RollingAverageTest {
         }
     }
 
-    @Test
-    public void test() throws JsonParseException, IOException {
-        JsonFactory factory = new JsonFactory();
-        JsonParser p = factory.createParser(RollingAverageTest.class.getResourceAsStream("/air.json"));
-        p.nextToken();
-        p.nextToken();
-        ObjectMapper mapper = new ObjectMapper();
-        while (true) {
-            Record n = mapper.readValue(p, Record.class);
-            if (n == null) {
-                break;
-            }
-            System.out.println(n);
-        }
-    }
-
     private static void saveDataForExcel(List<Entry> list, SimpleMatrix z, File output) throws FileNotFoundException {
         output.getParentFile().mkdirs();
         try (PrintStream out = new PrintStream(output)) {
