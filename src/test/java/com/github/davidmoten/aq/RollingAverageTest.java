@@ -125,8 +125,8 @@ public class RollingAverageTest {
         ValueAxis rangeAxis = plot.getRangeAxis();
         rangeAxis.setLowerBound(0);
         rangeAxis.setUpperBound(upperBound.orElse((Math.floor(max / 500) + 1) * 500));
-        ChartUtils.saveChartAsPNG(new File(chartFilename), chart, (int) Math.round(list.size() / 0.0395), 1200);
-        System.out.println("saved chart as png");
+        ChartUtils.saveChartAsPNG(new File(chartFilename), chart, Math.max(200, (int) Math.round(list.size() / 0.0395)), 1200);
+        System.out.println("saved png as chart "+ chartFilename);
 
     }
 
@@ -141,7 +141,7 @@ public class RollingAverageTest {
         dataset.addValue(16, "Civic", "2019-12-23 02:00");
         JFreeChart chart = ChartFactory.createBarChart("Civic" + " hourly PM 2.5", "Time", "PM 2.5 Raw", dataset);
         ChartUtils.saveChartAsPNG(new File("target/chart.png"), chart, 2000, 1200);
-        System.out.println("saved chart as png");
+        System.out.println("saved png chart ");
     }
 
 }

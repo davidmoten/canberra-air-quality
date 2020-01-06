@@ -53,6 +53,7 @@ public final class RollingAverage {
                 .filter(x -> x.name.equalsIgnoreCase(name)) //
                 // sort by time
                 .sorted((x, y) -> Long.compare(x.time, y.time)) //
+                .doOnNext(x -> System.out.println(x.value.orElse(-1.0))) //
                 // collect
                 .toList() //
                 // deal with missing entries

@@ -47,13 +47,15 @@ public final class RollingAverage2 {
                     .stream(in) //
                     .withMapper(MAPPER) //
                     .arrayNode() //
-                    .flatMap(node -> node.values(Record.class))
+                    .flatMap(node -> node.values(Record.class)) //
+                    .filter(rec -> name.equalsIgnoreCase(rec.name())) //
                     // only since start time inclusive
                     .filter(x -> x.time.getTime() >= SDF.parse(startTimestamp).getTime()) //
                     // only before finish time exclusive
                     .filter(x -> x.time.getTime() < SDF.parse(finishTimestamp).getTime()) //
                     // sort by time
                     .sorted((x, y) -> x.time.compareTo(y.time)) //
+//                    .doOnNext(x -> System.out.println(x.value().orElse(-1.0))) //
                     // collect
                     .toList() //
                     // deal with missing entries
