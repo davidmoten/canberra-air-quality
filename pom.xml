@@ -133,7 +133,7 @@
 
         <dependency>
             <groupId>com.github.davidmoten</groupId>
-            <artifactId>kool</artifactId>
+            <artifactId>kool-json</artifactId>
             <version>0.1.4-SNAPSHOT</version>
         </dependency>
     </dependencies>
